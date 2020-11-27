@@ -47,8 +47,8 @@ idx_val = np.arange(n_samples // 2, n_samples)
 
 print("Starting path computation...")
 n_samples = len(y[idx_train])
-alpha_max = np.max(np.abs(X[idx_train, :].T.dot(y[idx_train]))) / len(idx_train)
-log_alpha0 = np.log(alpha_max / 10)
+alpha_max = np.max(
+    np.abs(X[idx_train, :].T.dot(y[idx_train]))) / len(idx_train)
 
 n_alphas = 10
 p_alphas = np.geomspace(1, 0.0001, n_alphas)
@@ -63,7 +63,7 @@ max_iter = 1e5
 # -----------------------------
 
 estimator = linear_model.Lasso(
-    fit_intercept=False, max_iter=1000, warm_start=True)
+    fit_intercept=False, max_iter=max_iter, warm_start=True)
 
 print('scikit-learn started')
 
@@ -73,26 +73,28 @@ criterion = HeldOutMSE(idx_train, idx_val)
 algo = Forward()
 monitor_grid_sk = Monitor()
 grid_search(
-    algo, criterion, model, X, y, None, None, monitor_grid_sk, log_alphas=log_alphas, tol=tol)
+    algo, criterion, model, X, y, None, None, monitor_grid_sk,
+    log_alphas=log_alphas, tol=tol)
 objs = np.array(monitor_grid_sk.objs)
 t_sk = time.time() - t0
 
 print('scikit-learn finished')
 
 
-##############################################################################
+###############################################################################
 # Grad-search with sparse-ho
 # --------------------------
 
 print('sparse-ho started')
 
+log_alpha0 = np.log(alpha_max / 10)
 t0 = time.time()
 model = Lasso(estimator=estimator)
 criterion = HeldOutMSE(idx_train, idx_val)
 algo = ImplicitForward(criterion)
 monitor_grad = Monitor()
 grad_search(
-    algo, criterion, model, X, y, np.log(alpha_max / 10), monitor_grad,
+    algo, criterion, model, X, y, log_alpha0, monitor_grad,
     n_outer=10, tol=tol)
 
 t_grad_search = time.time() - t0
@@ -117,7 +119,7 @@ print('Minimum objective grad-search %.5f' % objs_grad.min())
 
 current_palette = sns.color_palette("colorblind")
 
-fig = plt.figure(figsize=(5, 3))
+plt.figure(figsize=(5, 3), constrained_layout=True)
 plt.semilogx(
     p_alphas, objs, color=current_palette[0])
 plt.semilogx(
@@ -131,5 +133,4 @@ plt.ylabel(
     r"$\|y^{\rm{val}} - X^{\rm{val}} \hat \beta^{(\lambda)} \|^2$")
 plt.tick_params(width=5)
 plt.legend()
-plt.tight_layout()
 plt.show(block=False)

@@ -14,7 +14,6 @@ as in scipy.
 import numpy as np
 from numpy.linalg import norm
 import matplotlib.pyplot as plt
-import seaborn as sns
 from sklearn import linear_model
 from sklearn.model_selection import train_test_split
 
@@ -40,23 +39,19 @@ else:
         n_samples=1000, n_features=1000, noise=40, random_state=0)
 
 # The dataset is split in 2: the data for training and validation: X
-# Useen data X_test, asserting the quality of the model
+# Unseen data X_test, asserting the quality of the model
 X, X_test, y, y_test = train_test_split(X, y, test_size=0.333, random_state=0)
 
 n_samples = X.shape[0]
 idx_train = np.arange(0, n_samples // 2)
 idx_val = np.arange(n_samples // 2, n_samples)
 
-n_samples = len(y[idx_train])
-alpha_max = np.max(np.abs(X[idx_train, :].T.dot(y[idx_train]))) / len(idx_train)
-log_alpha0 = np.log(alpha_max / 10)
-
-tol = 1e-7
-max_iter = 1e5
+alpha_max = np.max(
+    np.abs(X[idx_train, :].T.dot(y[idx_train]))) / len(idx_train)
 
 
 estimator = linear_model.Lasso(
-    fit_intercept=False, max_iter=max_iter, warm_start=True)
+    fit_intercept=False, max_iter=1e5, warm_start=True)
 
 #############################################################################
 # Call back definition
@@ -76,8 +71,6 @@ def callback(val, grad, mask, dense, log_alpha):
 # ---------------------------------------
 
 
-print('sparse-ho started')
-
 model = Lasso(estimator=estimator)
 criterion = HeldOutMSE(idx_train, idx_val)
 algo = ImplicitForward(criterion)
@@ -86,22 +79,16 @@ monitor = Monitor(callback=callback)
 
 grad_search(
     algo, criterion, model, X, y, np.log(alpha_max / 10), monitor,
-    n_outer=30, tol=tol)
+    n_outer=30, tol=1e-7)
 
-
-print('sparse-ho finished')
 
 ##############################################################################
 # Plot results
 # ------------
 
-current_palette = sns.color_palette("colorblind")
-
-fig = plt.figure(figsize=(5, 3))
 plt.plot(monitor.times, objs_test)
 plt.tick_params(width=5)
 plt.xlabel("Times (s)")
-plt.ylabel(r"$\|y^{\rm{test}} - X^{\rm{test}} \hat \beta^{(\lambda)} \|^2$")
-plt.legend()
+plt.ylabel("MSE on test")
 plt.tight_layout()
 plt.show(block=False)
