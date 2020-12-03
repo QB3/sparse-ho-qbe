@@ -16,7 +16,7 @@ class CrossVal(BaseCriterion):
         XXX
     """
 
-    def __init__(self, X, y, Model, cv=None, max_iter=1000, estimator=None):
+    def __init__(self, cv=None):
         """
         Parameters
         ----------
